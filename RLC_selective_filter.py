@@ -1,7 +1,7 @@
 # RLC calculator tool
 
 from math import sqrt, pow, pi
-from unit import *
+from common import *
 
 
 
