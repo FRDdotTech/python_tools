@@ -61,7 +61,7 @@ def compute_pi_match(Rs, Rl, f, Q=None, mode=None):
     if Q is None:
         Q = Qmin
     if Q < Qmin:
-        raise ValueError(f"Q trop faible, minimum = {Qmin:.4f}")
+        print(f"Q trop faible, minimum = {Qmin:.4f}")
 
     # Résistance virtuelle centrale du PI
     Rv = rmax / (1 + Q * Q)
@@ -95,7 +95,7 @@ def compute_t_match(Rs, Rl, f, Q=None, mode=None):
     if Q is None:
         Q = Qmin
     if Q < Qmin:
-        raise ValueError(f"Q trop faible, minimum = {Qmin:.4f}")
+        print(f"Q trop faible, minimum = {Qmin:.4f}")
 
     # Résistance virtuelle centrale du T
     Rv = (1+ (Q*Q))*rmin
@@ -124,7 +124,7 @@ def compute_ll_match(Rs, Rl, f, Q=None, mode=None):
     if Q is None:
         Q = Qmin
     if Q < Qmin:
-        raise ValueError(f"Q trop faible, minimum = {Qmin:.4f}")
+        print(f"Q trop faible, minimum = {Qmin:.4f}")
 
     # Résistance virtuelle centrale du PI
     Rv = math.sqrt(Rs * Rl)
