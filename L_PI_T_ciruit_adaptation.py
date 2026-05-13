@@ -12,13 +12,14 @@ def choose_topology():
     print("1 - L")
     print("2 - PI")
     print("3 - T")
+    print("4 - LL")
     while True:
-        choice = input("Votre choix (1/2/3) : ").strip()
-        if choice in ["1", "2", "3"]:
-            return {"1": "L", "2": "PI", "3": "T"}[choice]
+        choice = input("Votre choix (1/2/3:4) : ").strip()
+        if choice in ["1", "2", "3", "4"]:
+            return {"1": "L", "2": "PI", "3": "T", "4": "LL"}[choice]
         print("Choix invalide.")
 
-def compute_l_match(Rs, Rl, f, mode=None):
+def compute_l_match(Rs, Rl, f, mode="lpf"):
     """
     Adaptation en L entre Rs et Rl.
     Convention:
@@ -31,90 +32,121 @@ def compute_l_match(Rs, Rl, f, mode=None):
         swapped = True
 
     Q = math.sqrt(Rl / Rs - 1)
-    Xs = Rs * Q
-    Xp = Rl / Q
 
     w = 2 * math.pi * f
 
     # Cas classique : série puis parallèle
-    L_series = Xs / w
-    C_shunt = 1 / (w * Xp)
+    if mode == 1:
+        print("calcule pour low-pass")
+        C_val = Q / (Rl*w)
+        L_val =  1 / ((C_val * (w * w))*(1+1/(Q*Q)))
+    else:
+        print("calcule pour high-pass")
+        L_val = (Q*Rs) / w
+        C_val =  (1+(1/(Q*Q))) / (L_val * (w * w))
 
     result = {
         "Q": Q,
         "Rs": Rs,
         "Rl": Rl,
-        "L_series_H": L_series,
-        "C_shunt_F": C_shunt,
+        "L_series_H": L_val,
+        "C_shunt_F": C_val,
         "swapped": swapped
     }
     return result
 
-def compute_pi_match(Rs, Rl, f, Q=None):
-    """
-    Réseau PI : on impose Q si fourni, sinon Q minimal.
-    Formules usuelles:
-      Qmin = sqrt(Rhigh/Rlow - 1)
-      Q > Qmin pour un PI réalisable
-    """
-    Rlow = min(Rs, Rl)
-    Rhigh = max(Rs, Rl)
-    Qmin = math.sqrt(Rhigh / Rlow - 1)
-
+def compute_pi_match(Rs, Rl, f, Q=None, mode=None):
+    rmin, rmax = min(Rs, Rl), max(Rs, Rl)
+    Qmin = math.sqrt(rmax / rmin - 1)
     if Q is None:
         Q = Qmin
-    elif Q < Qmin:
-        raise ValueError(f"Q trop faible. Minimum requis: {Qmin:.4f}")
+    if Q < Qmin:
+        raise ValueError(f"Q trop faible, minimum = {Qmin:.4f}")
 
-    w = 2 * math.pi * f
+    # Résistance virtuelle centrale du PI
+    Rv = rmax / (1 + Q * Q)
 
-    Xs = Q * Rlow
-    Xp1 = Rhigh / Q
-    Xp2 = Rhigh / Q
+    # Deux sous-circuits L
 
-    C_in = 1 / (w * Xp1)
-    L_series = Xs / w
-    C_out = 1 / (w * Xp2)
+    print("ciruit Rs -> Rv")
+    result = compute_l_match(Rs, Rv, f, mode)
+    print(f"Q = {result['Q']:.4f}")
+    print(f"L = {format_value(result['L_series_H'], 'H')}")
+    print(f"C = {format_value(result['C_shunt_F'], 'F')}")
+    if result["swapped"]:
+        print("Note : Rs et Rl ont été inversées pour le calcul.")
 
-    return {
-        "Q": Q,
-        "Qmin": Qmin,
-        "C_in_F": C_in,
-        "L_series_H": L_series,
-        "C_out_F": C_out
-    }
-
-def compute_t_match(Rs, Rl, f, Q=None):
+    print("ciruit Rv -> Rl")
+    result = compute_l_match(Rv, Rl, f, mode)
+    print(f"Q = {result['Q']:.4f}")
+    print(f"L = {format_value(result['L_series_H'], 'H')}")
+    print(f"C = {format_value(result['C_shunt_F'], 'F')}")
+    if result["swapped"]:
+        print("Note : Rs et Rl ont été inversées pour le calcul.")
+    
+def compute_t_match(Rs, Rl, f, Q=None, mode=None):
     """
     Réseau T : on impose Q si fourni, sinon Q minimal.
     Formules usuelles:
       Qmin = sqrt(Rhigh/Rlow - 1)
     """
-    Rlow = min(Rs, Rl)
-    Rhigh = max(Rs, Rl)
-    Qmin = math.sqrt(Rhigh / Rlow - 1)
-
+    rmin, rmax = min(Rs, Rl), max(Rs, Rl)
+    Qmin = math.sqrt(rmax / rmin - 1)
     if Q is None:
         Q = Qmin
-    elif Q < Qmin:
-        raise ValueError(f"Q trop faible. Minimum requis: {Qmin:.4f}")
+    if Q < Qmin:
+        raise ValueError(f"Q trop faible, minimum = {Qmin:.4f}")
 
-    w = 2 * math.pi * f
+    # Résistance virtuelle centrale du T
+    Rv = (1+ (Q*Q))*rmin
 
-    Xs = Rlow * Q
-    Xp = Rhigh / Q
+    # Deux sous-circuits L
 
-    L1 = Xs / w
-    Cshunt = 1 / (w * Xp)
-    L2 = Xs / w
+    print("ciruit Rs -> Rv")
+    result = compute_l_match(Rs, Rv, f, mode)
+    print(f"Q = {result['Q']:.4f}")
+    print(f"L = {format_value(result['L_series_H'], 'H')}")
+    print(f"C = {format_value(result['C_shunt_F'], 'F')}")
+    if result["swapped"]:
+        print("Note : Rs et Rl ont été inversées pour le calcul.")
 
-    return {
-        "Q": Q,
-        "Qmin": Qmin,
-        "L1_H": L1,
-        "C_shunt_F": Cshunt,
-        "L2_H": L2
-    }
+    print("ciruit Rv -> Rl")
+    result = compute_l_match(Rv, Rl, f, mode)
+    print(f"Q = {result['Q']:.4f}")
+    print(f"L = {format_value(result['L_series_H'], 'H')}")
+    print(f"C = {format_value(result['C_shunt_F'], 'F')}")
+    if result["swapped"]:
+        print("Note : Rs et Rl ont été inversées pour le calcul.")
+
+def compute_ll_match(Rs, Rl, f, Q=None, mode=None):
+    rmin, rmax = min(Rs, Rl), max(Rs, Rl)
+    Qmin = math.sqrt(rmax / rmin - 1)
+    if Q is None:
+        Q = Qmin
+    if Q < Qmin:
+        raise ValueError(f"Q trop faible, minimum = {Qmin:.4f}")
+
+    # Résistance virtuelle centrale du PI
+    Rv = math.sqrt(Rs * Rl)
+
+    # Deux sous-circuits L
+
+    print("ciruit Rs -> Rv")
+    result = compute_l_match(Rs, Rv, f, mode)
+    print(f"Q = {result['Q']:.4f}")
+    print(f"L = {format_value(result['L_series_H'], 'H')}")
+    print(f"C = {format_value(result['C_shunt_F'], 'F')}")
+    if result["swapped"]:
+        print("Note : Rs et Rl ont été inversées pour le calcul.")
+
+    print("ciruit Rv -> Rl")
+    result = compute_l_match(Rv, Rl, f, mode)
+    print(f"Q = {result['Q']:.4f}")
+    print(f"L = {format_value(result['L_series_H'], 'H')}")
+    print(f"C = {format_value(result['C_shunt_F'], 'F')}")
+    if result["swapped"]:
+        print("Note : Rs et Rl ont été inversées pour le calcul.")
+    
 
 def format_value(value, unit):
     prefixes = [
@@ -138,6 +170,7 @@ def main():
     Rs = ask_float("Résistance/source Rs (ohms) : ")
     Rl = ask_float("Résistance/charge Rl (ohms) : ")
     f = ask_float("Fréquence (Hz) : ")
+    mode = ask_float("type de cirtuit 1 : lpf - 2 : hpf")
 
     Q_user = None
     if topo in ["PI", "T"]:
@@ -150,28 +183,23 @@ def main():
     print(f"Rs = {Rs} ohms, Rl = {Rl} ohms, f = {f} Hz")
 
     if topo == "L":
-        result = compute_l_match(Rs, Rl, f)
+        result = compute_l_match(Rs, Rl, f, mode)
         print(f"Q = {result['Q']:.4f}")
-        print(f"L série = {format_value(result['L_series_H'], 'H')}")
-        print(f"C shunt = {format_value(result['C_shunt_F'], 'F')}")
+        print(f"L = {format_value(result['L_series_H'], 'H')}")
+        print(f"C = {format_value(result['C_shunt_F'], 'F')}")
         if result["swapped"]:
             print("Note : Rs et Rl ont été inversées pour le calcul.")
 
     elif topo == "PI":
-        result = compute_pi_match(Rs, Rl, f, Q_user)
-        print(f"Q = {result['Q']:.4f}")
-        print(f"Qmin = {result['Qmin']:.4f}")
-        print(f"C entrée = {format_value(result['C_in_F'], 'F')}")
-        print(f"L série = {format_value(result['L_series_H'], 'H')}")
-        print(f"C sortie = {format_value(result['C_out_F'], 'F')}")
+        result = compute_pi_match(Rs, Rl, f, Q_user, mode)
+        
 
     elif topo == "T":
-        result = compute_t_match(Rs, Rl, f, Q_user)
-        print(f"Q = {result['Q']:.4f}")
-        print(f"Qmin = {result['Qmin']:.4f}")
-        print(f"L1 = {format_value(result['L1_H'], 'H')}")
-        print(f"C shunt = {format_value(result['C_shunt_F'], 'F')}")
-        print(f"L2 = {format_value(result['L2_H'], 'H')}")
+        result = compute_t_match(Rs, Rl, f, Q_user, mode)
+
+    elif topo == "LL":
+        result = compute_ll_match(Rs, Rl, f, Q_user, mode)
+        
 
 if __name__ == "__main__":
     main()
