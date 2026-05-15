@@ -1,4 +1,5 @@
 import math
+from common import *
 
 def ask_float(prompt):
     while True:
@@ -61,7 +62,7 @@ def compute_pi_match(Rs, Rl, f, Q=None, mode=None):
     if Q is None:
         Q = Qmin
     if Q < Qmin:
-        print(f"Q trop faible, minimum = {Qmin:.4f}")
+        printf("Q trop faible, minimum = ", Qmin)
 
     # Résistance virtuelle centrale du PI
     Rv = rmax / (1 + Q * Q)
@@ -70,17 +71,17 @@ def compute_pi_match(Rs, Rl, f, Q=None, mode=None):
 
     print("ciruit Rs -> Rv")
     result = compute_l_match(Rs, Rv, f, mode)
-    print(f"Q = {result['Q']:.4f}")
-    print(f"L = {format_value(result['L_series_H'], 'H')}")
-    print(f"C = {format_value(result['C_shunt_F'], 'F')}")
+    printf("Q = ", result['Q'])
+    print("L = ", format_value(result['L_series_H'], 'H'))
+    print("C = ", format_value(result['C_shunt_F'], 'F'))
     if result["swapped"]:
         print("Note : Rs et Rl ont été inversées pour le calcul.")
 
     print("ciruit Rv -> Rl")
     result = compute_l_match(Rv, Rl, f, mode)
-    print(f"Q = {result['Q']:.4f}")
-    print(f"L = {format_value(result['L_series_H'], 'H')}")
-    print(f"C = {format_value(result['C_shunt_F'], 'F')}")
+    printf("Q = ", result['Q'])
+    print("L = ", format_value(result['L_series_H'], 'H'))
+    print("C = ", format_value(result['C_shunt_F'], 'F'))
     if result["swapped"]:
         print("Note : Rs et Rl ont été inversées pour le calcul.")
     
@@ -95,7 +96,7 @@ def compute_t_match(Rs, Rl, f, Q=None, mode=None):
     if Q is None:
         Q = Qmin
     if Q < Qmin:
-        print(f"Q trop faible, minimum = {Qmin:.4f}")
+        printf("Q trop faible, minimum = ", Qmin)
 
     # Résistance virtuelle centrale du T
     Rv = (1+ (Q*Q))*rmin
@@ -104,17 +105,17 @@ def compute_t_match(Rs, Rl, f, Q=None, mode=None):
 
     print("ciruit Rs -> Rv")
     result = compute_l_match(Rs, Rv, f, mode)
-    print(f"Q = {result['Q']:.4f}")
-    print(f"L = {format_value(result['L_series_H'], 'H')}")
-    print(f"C = {format_value(result['C_shunt_F'], 'F')}")
+    printf("Q = ", result['Q'])
+    print("L = ", format_value(result['L_series_H'], 'H'))
+    print("C = ", format_value(result['C_shunt_F'], 'F'))
     if result["swapped"]:
         print("Note : Rs et Rl ont été inversées pour le calcul.")
 
     print("ciruit Rv -> Rl")
     result = compute_l_match(Rv, Rl, f, mode)
-    print(f"Q = {result['Q']:.4f}")
-    print(f"L = {format_value(result['L_series_H'], 'H')}")
-    print(f"C = {format_value(result['C_shunt_F'], 'F')}")
+    printf("Q = ", result['Q'])
+    print("L = ", format_value(result['L_series_H'], 'H'))
+    print("C = ", format_value(result['C_shunt_F'], 'F'))
     if result["swapped"]:
         print("Note : Rs et Rl ont été inversées pour le calcul.")
 
@@ -124,7 +125,7 @@ def compute_ll_match(Rs, Rl, f, Q=None, mode=None):
     if Q is None:
         Q = Qmin
     if Q < Qmin:
-        print(f"Q trop faible, minimum = {Qmin:.4f}")
+        printf("Q trop faible, minimum = ", Qmin)
 
     # Résistance virtuelle centrale du PI
     Rv = math.sqrt(Rs * Rl)
@@ -133,17 +134,17 @@ def compute_ll_match(Rs, Rl, f, Q=None, mode=None):
 
     print("ciruit Rs -> Rv")
     result = compute_l_match(Rs, Rv, f, mode)
-    print(f"Q = {result['Q']:.4f}")
-    print(f"L = {format_value(result['L_series_H'], 'H')}")
-    print(f"C = {format_value(result['C_shunt_F'], 'F')}")
+    printf("Q = ", result['Q'])
+    print("L = ", format_value(result['L_series_H'], 'H'))
+    print("C = ", format_value(result['C_shunt_F'], 'F'))
     if result["swapped"]:
         print("Note : Rs et Rl ont été inversées pour le calcul.")
 
     print("ciruit Rv -> Rl")
     result = compute_l_match(Rv, Rl, f, mode)
-    print(f"Q = {result['Q']:.4f}")
-    print(f"L = {format_value(result['L_series_H'], 'H')}")
-    print(f"C = {format_value(result['C_shunt_F'], 'F')}")
+    printf("Q = ", result['Q'])
+    print("L = ", format_value(result['L_series_H'], 'H'))
+    print("C = ", format_value(result['C_shunt_F'], 'F'))
     if result["swapped"]:
         print("Note : Rs et Rl ont été inversées pour le calcul.")
     
@@ -161,8 +162,8 @@ def format_value(value, unit):
     abs_val = abs(value)
     for scale, prefix in prefixes:
         if abs_val < scale * 1000 or scale == 1e6:
-            return f"{value/scale:.4g} {prefix}{unit}"
-    return f"{value:.4g} {unit}"
+            return str(value/scale) + str(prefix) + str(unit)
+    return str(value) + str(unit)
 
 def main():
     print("=== Calcul d'adaptation d'impédance ===")
@@ -179,14 +180,14 @@ def main():
             Q_user = ask_float("Valeur de Q : ")
 
     print("\n--- Résultats ---")
-    print(f"Topologie choisie : {topo}")
-    print(f"Rs = {Rs} ohms, Rl = {Rl} ohms, f = {f} Hz")
+    print("Topologie choisie : ", topo)
+    print("Rs = ", Rs, "ohms, Rl = ", Rl, " ohms, f = ", f, " Hz")
 
     if topo == "L":
         result = compute_l_match(Rs, Rl, f, mode)
-        print(f"Q = {result['Q']:.4f}")
-        print(f"L = {format_value(result['L_series_H'], 'H')}")
-        print(f"C = {format_value(result['C_shunt_F'], 'F')}")
+        printf("Q = ", result['Q'])
+        print("L = ", format_value(result['L_series_H'], 'H'))
+        print("C = ", format_value(result['C_shunt_F'], 'F'))
         if result["swapped"]:
             print("Note : Rs et Rl ont été inversées pour le calcul.")
 
@@ -201,5 +202,5 @@ def main():
         result = compute_ll_match(Rs, Rl, f, Q_user, mode)
         
 
-if __name__ == "__main__":
-    main()
+
+main()

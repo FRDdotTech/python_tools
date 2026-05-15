@@ -7,10 +7,7 @@ Partie B: score de testabilité pour chaque faute stuck-at.
 Partie C: génération d'un vecteur de test pour une faute spécifiée.
 """
 
-from __future__ import annotations
-
-from itertools import product
-from typing import Any
+from common import *
 
 AND = 0
 OR = 1
@@ -55,7 +52,7 @@ class Gate:
         elif self.gate_type == NOT:
             value = not self.A.out(inputs=inputs, fault=fault, cache=cache)
         else:
-            raise ValueError(f"Unsupported gate type {self.gate_type}")
+            print("Unsupported gate type")
 
         cache[self.node_name] = value
         return value
@@ -75,7 +72,7 @@ class Gate:
             return min(self.A.CC0() + self.B.CC0(), self.A.CC1() + self.B.CC1()) + 1
         if self.gate_type == NOT:
             return self.A.CC1() + 1
-        raise ValueError(f"Unsupported gate type {self.gate_type}")
+        print("Unsupported gate type")
 
     def CC1(self) -> int:
         if self.gate_type == PIN:
@@ -92,11 +89,11 @@ class Gate:
             return min(self.A.CC1() + self.B.CC0(), self.A.CC0() + self.B.CC1()) + 1
         if self.gate_type == NOT:
             return self.A.CC0() + 1
-        raise ValueError(f"Unsupported gate type {self.gate_type}")
+        print("Unsupported gate type")
 
     def CO(self) -> int:
         if not self.COout:
-            raise ValueError(f"CO called on node {self.node_name} with no observability value")
+            printf("CO called on node ", self.node_name, " with no observability value")
         cost = min(self.COout)
         if self.gate_type == PIN:
             return cost
@@ -112,7 +109,7 @@ class Gate:
         elif self.gate_type == NOT:
             self.A.COout.append(cost + 1)
         else:
-            raise ValueError(f"Unsupported gate type {self.gate_type}")
+            print("Unsupported gate type")
         return cost
 
     def reset_coout(self) -> None:
@@ -123,7 +120,7 @@ class Gate:
             self.B.reset_coout()
 
     def row(self, co_value: int | str) -> str:
-        return f"{self.node_name.rjust(5)}   {str(self.CC0()).rjust(5)}   {str(self.CC1()).rjust(5)}   {str(co_value).rjust(5)}"
+        return self.node_name + str(self.CC0()) + str(self.CC1()) + str(co_value)
 
 
 class Circuit:
@@ -141,17 +138,17 @@ class Circuit:
     def add_gate(self, name: str, gate_type: int, input_a: str, input_b: str | None = None) -> None:
         if gate_type == NOT:
             if input_a not in self.gates:
-                raise ValueError(f"Input '{input_a}' not found for gate '{name}'")
+                print("input error")
             self.gates[name] = Gate(name, gate_type, self.gates[input_a])
         else:
             if input_a not in self.gates or input_b not in self.gates:
-                raise ValueError(f"Inputs '{input_a}' or '{input_b}' not found for gate '{name}'")
+                print("input error")
             self.gates[name] = Gate(name, gate_type, self.gates[input_a], self.gates[input_b])
 
     def set_outputs(self, outputs: list[str]) -> None:
         for output in outputs:
             if output not in self.gates:
-                raise ValueError(f"Output '{output}' is not defined")
+                print("output error")
         self.outputs = outputs
 
     def compute_cc_values(self) -> tuple[dict[str, int], dict[str, int]]:
@@ -190,7 +187,7 @@ class Circuit:
 
     def evaluate(self, node_name: str, inputs: dict[str, bool], fault: tuple[str, bool] | None = None) -> bool:
         if node_name not in self.gates:
-            raise ValueError(f"Node '{node_name}' not found")
+                print("node not found")
         return self.gates[node_name].out(inputs=inputs, fault=fault, cache={})
 
     def evaluate_all(self, inputs: dict[str, bool], fault: tuple[str, bool] | None = None) -> dict[str, bool]:
@@ -199,11 +196,12 @@ class Circuit:
             values[name] = gate.out(inputs=inputs, fault=fault, cache=values)
         return values
 
+
     def find_test_vector(self, fault_node: str, stuck_at: bool, max_inputs: int = 16) -> tuple[dict[str, bool], dict[str, bool], dict[str, bool]] | None:
         if len(self.inputs) > max_inputs:
             return None
         if fault_node not in self.gates:
-            raise ValueError(f"Fault node '{fault_node}' not found")
+                print("fault node not found")
         fault_value = bool(stuck_at)
         target_value = not fault_value
         for bits in product([False, True], repeat=len(self.inputs)):
@@ -237,126 +235,130 @@ def read_list(prompt: str) -> list[str]:
 
 
 def parse_gate_definition(line: str, circuit: Circuit) -> None:
-    tokens = line.strip().split("_")
+    if "_" in line:
+        tokens = line.strip().split("_")
+    elif "," in line:
+        tokens = line.strip().split(",")
     if len(tokens) < 3:
-        raise ValueError(f"Invalid gate definition: '{line}'")
+        print("invalid gate definition")
     name = tokens[0]
     op = tokens[1].lower()
     if op == "not":
         if len(tokens) != 3:
-            raise ValueError(f"Invalid NOT gate definition: '{line}'")
+            print("invalid gate definition")
         circuit.add_gate(name, NOT, tokens[2])
     else:
         if len(tokens) != 4:
-            raise ValueError(f"Invalid gate definition: '{line}'")
+            print("invalid gate definition")
         input_a = tokens[2]
         input_b = tokens[3]
-        if op == "and":
+        if op in ["and", "a"]:
             circuit.add_gate(name, AND, input_a, input_b)
-        elif op == "or":
+        elif op in ["or", "o"]:
             circuit.add_gate(name, OR, input_a, input_b)
-        elif op == "nand":
+        elif op in ["nand", "na"]:
             circuit.add_gate(name, NAND, input_a, input_b)
         elif op == "nor":
             circuit.add_gate(name, NOR, input_a, input_b)
         elif op == "xor":
             circuit.add_gate(name, XOR, input_a, input_b)
         else:
-            raise ValueError(f"Unknown gate type '{op}' in definition '{line}'")
+            print("invalid gate definition")
 
 
 def print_scoap(circuit: Circuit) -> None:
     co = circuit.compute_co_values()
-    print(f"{'node'.rjust(5)}   {'CC0'.rjust(5)}   {'CC1'.rjust(5)}   {'CO'.rjust(5)}")
+    printf(" node", "  CC0", "  CC1", "  CO")
     for name in circuit.gates:
         gate = circuit.gates[name]
-        print(f"{name.rjust(5)}   {str(gate.CC0()).rjust(5)}   {str(gate.CC1()).rjust(5)}   {str(co[name]).rjust(5)}")
+        printf( "   ",name, "    ", str(gate.CC0()), "    ", str(gate.CC1()), "    ", str(co[name]))
 
 
-def print_part_b(circuit: Circuit) -> None:
-    cc0, cc1 = circuit.compute_cc_values()
-    co = circuit.compute_co_values()
-    print("\nPartie B : score de testabilité pour chaque faute stuck-at")
-    print(f"{'node'.rjust(5)}   {'s-a-0'.rjust(5)}   {'s-a-1'.rjust(5)}   {'CO'.rjust(5)}")
-    for name in circuit.gates:
-        score_sa0 = cc1[name] + co[name]
-        score_sa1 = cc0[name] + co[name]
-        print(f"{name.rjust(5)}   {str(score_sa0).rjust(5)}   {str(score_sa1).rjust(5)}   {str(co[name]).rjust(5)}")
-
-
-def print_part_c(circuit: Circuit) -> None:
-    print("\nPartie C : génération de vecteur de test pour une faute stuck-at")
-    print("Entrez les fautes sous la forme 'node/0' ou 'node/1'. Une ligne vide termine.")
-    faults: list[tuple[str, bool]] = []
-    while True:
-        line = input().strip()
-        if not line:
-            break
-        if "/" not in line:
-            print("Format invalide. Utilisez node/0 ou node/1.")
-            continue
-        name, value = line.split("/", 1)
-        value = value.strip()
-        if value not in {"0", "1"}:
-            print("Valeur de faute invalide, utilisez 0 ou 1.")
-            continue
-        faults.append((name.strip(), value == "1"))
-
-    if not faults:
-        print("Aucune faute saisie. Partie C annulée.")
-        return
-
-    for fault_node, stuck_at in faults:
-        print(f"\nFaute {fault_node}/{'1' if stuck_at else '0'} :")
-        if fault_node not in circuit.gates:
-            print(f"  Noeud '{fault_node}' non défini")
-            continue
-        result = circuit.find_test_vector(fault_node, stuck_at)
-        if result is None:
-            print("  Aucun vecteur de test trouvé (ou trop d'entrées pour recherche exhaustive).")
-            continue
-        assignment, good, faulty = result
-        print("  Vecteur de test trouvé :")
-        print("   " + " ".join(f"{inp}={int(assignment[inp])}" for inp in circuit.inputs))
-        print("  Valeurs circuits :")
-        for out in circuit.outputs:
-            print(f"   sortie {out} good={int(good[out])} faulty={int(faulty[out])}")
 
 
 def main() -> None:
     circuit = Circuit()
-    inputs = read_list("Entrez les noms des entrées primaires, une par ligne (vide pour terminer):")
+    inputs = read_list("Entrez les noms des entrées primaires, \nune par ligne \nVide pour terminer :")
     for input_name in inputs:
         circuit.add_pin(input_name)
 
-    print("Entrez ensuite les définitions de portes (exemples : x_and_a_b, y_or_a_b, z_not_x). Vide pour terminer :")
+    print("Entrez ensuite les définitions de portes \n(exemples : x_and_a_b, y_or_a_b, z_not_x). \nVide pour terminer :")
     gate_defs = read_list("")
     for line in gate_defs:
         parse_gate_definition(line, circuit)
 
-    outputs = read_list("Entrez les noms des sorties, une par ligne (vide pour terminer) [par défaut 's' si existant]:")
+    outputs = read_list("Entrez les noms des sorties,\nune par ligne \n[par défaut 's' si existant] \n \nVide pour terminer :")
     if not outputs:
         if "s" in circuit.gates:
             outputs = ["s"]
         else:
-            print("Aucune sortie définie. Utilisez 's' ou spécifiez une sortie.")
-            outputs = read_list("Entrez les noms des sorties, une par ligne (vide pour terminer):")
+            print("Aucune sortie définie. \n Utilisez 's' ou spécifiez une sortie.")
+            outputs = read_list("Entrez les noms des sorties, \nune par ligne \nVide pour terminer :")
     if not outputs:
         print("Aucune sortie disponible, arrêt.")
         return
     circuit.set_outputs(outputs)
 
-    part = input("Calculer les parties A, B et C ? Entrez A, B, C ou ALL :").strip().lower()
-    if not part:
-        part = "all"
-    if part in {"a", "all"}:
-        print("\nPartie A : SCOAP (CC0, CC1, CO)")
-        print_scoap(circuit)
-    if part in {"b", "all"}:
-        print_part_b(circuit)
-    if part in {"c", "all"}:
-        print_part_c(circuit)
+    print("\nPartie A : SCOAP (CC0, CC1, CO)")
+    print_scoap(circuit)
+
+    print("simulation")
+    while True:
+        for i in circuit.inputs:
+            state = input("input " + i + " = ")
+            if state in ["0", "1"]:
+                circuit.gates[i].A = int(state)
+            else :
+                break
+        for i in circuit.outputs:
+            print(i + " = " + str(circuit.gates[i].out()))
+
+        if input("fault test ? "):
+            result_list = []
+            print("Entrez les fautes sous la forme 'node/0' ou 'node/1'. Une ligne vide termine.")
+            print(circuit.gates.keys())
+            faults: list[tuple[str, bool]] = []
+            while True:
+                line = input().strip()
+                if not line:
+                    break
+                if "/" in line:
+                    name, value = line.split("/", 1)
+                elif "," in line:
+                    name, value = line.split(",", 1)
+                value = value.strip()
+                if value not in {"0", "1"}:
+                    print("Valeur de faute invalide, utilisez 0 ou 1.")
+                    continue
+                faults.append((name.strip(), value == "1"))
+
+            if not faults:
+                print("Aucune faute saisie.")
+                continue
+
+            for fault_node, stuck_at in faults:
+                print(fault_node + " S@" + str(int(stuck_at)))
+                if fault_node not in circuit.gates:
+                    print("Noeud non défini")
+                    continue
+                context_gt = circuit.gates[fault_node].gate_type
+                context_a = circuit.gates[fault_node].A
+                context_b = circuit.gates[fault_node].B
+                circuit.gates[fault_node].gate_type = PIN
+                circuit.gates[fault_node].A = stuck_at
+                print(context_gt)
+                result_list.append(str(circuit.gates[circuit.outputs[0]].out()))
+                for output in circuit.outputs:
+                    print(output + " = " + str(circuit.gates[output].out()))
+                circuit.gates[fault_node].gate_type = context_gt
+                circuit.gates[fault_node].A = context_a
+                circuit.gates[fault_node].B = context_b
+            for res in result_list:
+                print(res)
+
+            if input("exit ?") == "1":
+                return
 
 
-if __name__ == "__main__":
-    main()
+
+main()

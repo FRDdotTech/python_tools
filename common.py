@@ -52,3 +52,24 @@ def unit(u:float, sign:str = "") -> str:
         unit = " p"
         str_u = str(round(u*1000000000000,4))
     return str_u + unit + sign
+
+def product(*iterables, repeat=1):
+    # product('ABCD', 'xy') → Ax Ay Bx By Cx Cy Dx Dy
+    # product(range(2), repeat=3) → 000 001 010 011 100 101 110 111
+
+    if repeat < 0:
+        print('repeat argument cannot be negative')
+    pools = [tuple(pool) for pool in iterables] * repeat
+
+    result = [[]]
+    for pool in pools:
+        result = [x+[y] for x in result for y in pool]
+
+    for prod in result:
+        yield tuple(prod)
+
+def printf(*args):
+    formatted_string = ""
+    for arg in args:
+        formatted_string += str(arg)
+    print(formatted_string)
