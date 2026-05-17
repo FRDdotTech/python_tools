@@ -1,6 +1,4 @@
 ﻿"""
-logic_gate_sim.py
-
 Calcule SCOAP pour un schéma logique et propose les parties A, B et C.
 Partie A: CC0, CC1 et CO pour chaque ligne.
 Partie B: score de testabilité pour chaque faute stuck-at.
@@ -17,6 +15,7 @@ XOR = 4
 NOT = 5
 PIN = 6
 
+gate_array = ["and", "or", "nand", "nor", "xor", "not", ""]
 
 class Gate:
     def __init__(self, node_name: str, gate_type: int, A: bool | Gate = False, B: bool | Gate = False) -> None:
@@ -314,7 +313,7 @@ def main() -> None:
             print(i + " = " + str(circuit.gates[i].out()))
 
         if input("fault test ? "):
-            result_list = []
+            result_list:list[list[str]] = [[],[],[],[],[],[],[]]
             print("Entrez les fautes sous la forme 'node/0' ou 'node/1'. Une ligne vide termine.")
             print(circuit.gates.keys())
             faults: list[tuple[str, bool]] = []
@@ -347,18 +346,20 @@ def main() -> None:
                 circuit.gates[fault_node].gate_type = PIN
                 circuit.gates[fault_node].A = stuck_at
                 print(context_gt)
-                result_list.append(str(circuit.gates[circuit.outputs[0]].out()))
-                for output in circuit.outputs:
-                    print(output + " = " + str(circuit.gates[output].out()))
+                for j, output in enumerate(circuit.outputs):
+                    result_list[j].append(str(int(circuit.gates[output].out())))
+                    print(output + " = " + str(int(circuit.gates[output].out())))
                 circuit.gates[fault_node].gate_type = context_gt
                 circuit.gates[fault_node].A = context_a
                 circuit.gates[fault_node].B = context_b
-            for res in result_list:
-                print(res)
+            for j, output in enumerate(circuit.outputs):
+                print_out = ""
+                for element in result_list[j]:
+                    print_out += element
+                print(output + " = " + print_out)
 
-            if input("exit ?") == "1":
+        
+        if input("exit ?") == "1":
                 return
-
-
 
 main()
