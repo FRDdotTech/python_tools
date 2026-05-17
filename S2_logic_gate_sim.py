@@ -222,6 +222,17 @@ class Circuit:
         return [(name, False) for name in self.gates] + [(name, True) for name in self.gates]
 
 
+def read_nodes(prompt: str) -> list[str]:
+    values: list[str] = []
+    index = 0
+    while True:
+        index += 1
+        line = input("\ny" + str(index) + " : ").strip().lower()
+        if line == "":
+            break
+        values.append("y"+ str(index) +"::" + line)
+    return values
+
 def read_list(prompt: str) -> list[str]:
     print(prompt)
     values: list[str] = []
@@ -234,13 +245,15 @@ def read_list(prompt: str) -> list[str]:
 
 
 def parse_gate_definition(line: str, circuit: Circuit) -> None:
+    name = line.split("::")[0]
+    line = line.split("::")[1]
     if "_" in line:
         tokens = line.strip().split("_")
     elif "," in line:
         tokens = line.strip().split(",")
     if len(tokens) < 3:
         print("invalid gate definition")
-    name = tokens[0]
+    tokens.insert(0, name)
     op = tokens[1].lower()
     if op == "not":
         if len(tokens) != 3:
@@ -277,12 +290,12 @@ def print_scoap(circuit: Circuit) -> None:
 
 def main() -> None:
     circuit = Circuit()
-    inputs = read_list("Entrez les noms des entrées primaires, \nune par ligne \nVide pour terminer :")
+    inputs = read_list("Entrez les noms des entrées, \nune par ligne \nVide pour terminer :")
     for input_name in inputs:
         circuit.add_pin(input_name)
 
     print("Entrez ensuite les définitions de portes \n(exemples : x_and_a_b, y_or_a_b, z_not_x). \nVide pour terminer :")
-    gate_defs = read_list("")
+    gate_defs = read_nodes("")
     for line in gate_defs:
         parse_gate_definition(line, circuit)
 
@@ -352,6 +365,7 @@ def main() -> None:
                 circuit.gates[fault_node].gate_type = context_gt
                 circuit.gates[fault_node].A = context_a
                 circuit.gates[fault_node].B = context_b
+            print("\nvector results : ")
             for j, output in enumerate(circuit.outputs):
                 print_out = ""
                 for element in result_list[j]:
